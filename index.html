@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MusicPlayer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/font/fontawesome-free-5.15.3-web/fontawesome-free-5.15.3-web/css/all.min.css">
+  <link rel="stylesheet" href="./assets/css/main.css">
+</head>
+<body>
+  <div class="player">
+    <!-- Dashboard -->
+    <div class="dashboard">
+      <!-- Header -->
+      <header>
+        <h4>Now Playing</h4>
+  
+        <h2>My Playlist</h2>
+      </header>
+  
+      <div class="cd">
+        <div class="cd-thumb" style="background-image: url('./assets/img/Ngoat_lofi.jpg')"></div>
+      </div>
+
+      <div class="control">
+        <div class="btn btn-repeat">
+          <i class="fas fa-redo-alt"></i>
+        </div>
+
+        <div class="btn btn-prev">
+          <i class="fas fa-forward" style="transform: rotate(180deg)"></i>
+        </div>
+
+        <div class="btn btn-toggle-play">
+          <i class="fas fa-pause icon-pause"></i>
+          <i class="fas fa-play icon-play"></i>
+        </div>
+
+        <div class="btn btn-next">
+          <i class="fas fa-forward"></i>
+        </div>
+
+        <div class="btn btn-random">
+          <i class="fas fa-random"></i>
+        </div>
+      </div>
+
+      <input id="progress" class="progress" type="range" value="0" step="any" min="0" max="100">
+
+      <audio id="audio" src=""></audio>
+    </div>
+    
+    <!-- Playlist -->
+    <div class="playlist">
+      <div class="song">
+        <div class="thumb" style="background-image: url('./assets/img/Tu_choi_nhe_nhang.jpg')"></div>
+        
+        <div class="body">
+          <h3 class="title">Music name</h3>
+          <p class="author">Singer</p>
+        </div>
+
+        <div class="option">
+          <i class="fas fa-ellipsis-h"></i>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+      
+    const $ = document.querySelector.bind(document)
+    const $$ = document.querySelectorAll.bind(document)
+
+    const PLAYER_STORAGE_KEY = "QUANG'S_PLAYER"
+
+    const heading = $('header h2')
+    const thumb = $('.cd-thumb')
+    const audio = $('#audio')
+    const cd = $('.cd'), cdWidth = cd.offsetWidth
+    const player = $('.player')
+    const playlist = $('.playlist')
+    const playBtn = $('.btn-toggle-play')
+    const nextBtn = $('.btn-next')
+    const prevBtn = $('.btn-prev')
+    const randomBtn = $('.btn-random')
+    const repeatBtn = $('.btn-repeat')
+
+    const app = {
+      songs: [
+        {
+            name: 'Simple Love (W/n Remix)',
+            singer: 'Tien, Duong',
+            path: './assets/music/Simple_love.mp3',
+            image: './assets/img/Simple_love.jfif',
+        },
+        {
+          name: 'Xin Lỗi Vì Đã Yêu Nhau',
+          singer: 'Hoài Lâm',
+          path: './assets/music/Xin_loi_vi_da_yeu_nhau.mp3',
+          image: './assets/img/Xin_loi_vi_da_yeu_nhau.jpg',
+        },
+        {
+          name: 'Đường Tôi Chở Em Về',
+          singer: 'buitruonglinh',
+          path: './assets/music/Duong_toi_cho_em_ve.mp3',
+          image: './assets/img/Duong_toi_cho_em_ve.jpg',
+        },
+        {
+          name: 'Từ Chối Nhẹ Nhàng Thôi',
+          singer: 'Bích Phương ft Phúc Du',
+          path: './assets/music/Tu_choi_nhe_nhang_thoi.mp3',
+          image: './assets/img/Tu_choi_nhe_nhang_thoi.jpg',
+        },
+        {
+          name: 'Ngoặt (lofi)',
+          singer: 'Reddy',
+          path: './assets/music/Ngoat.mp3',
+          image: './assets/img/Ngoat_lofi.jpg',
+        },
+        {
+          name: 'Không Sao Đâu',
+          singer: 'Trịnh Thăng Bình',
+          path: './assets/music/Khong_sao_dau.mp3',
+          image: './assets/img/Trinh_Thang_Binh.jfif',
+        },
+      ],
+      currentIndex: 0,
+      isPlaying: false,
+      isRandom: false,
+      isRepeat: false,
+      config: JSON.parse(localStorage.getItem(PLAYER_STORAGE_KEY)) || {},
+      setConfig: function(key, value) {
+        this.config[key] = value
+        localStorage.setItem(PLAYER_STORAGE_KEY, JSON.stringify(this.config))
+      },
+      defineProperties: function () {
+        Object.defineProperty(this, 'currentSong', {
+          get: function () {
+            return this.songs[this.currentIndex]
+          }
+        })
+      },
+      render: function() {
+        const html = this.songs.map(function(song, index) {
+          return `
+            <div class="song" data-index="${index}">
+              <div class="thumb" style="background-image: url('${song.image}')"></div>
+              
+              <div class="body">
+                <h3 class="title">${song.name}</h3>
+                <p class="author">${song.singer}</p>
+              </div>
+
+              <div class="option">
+                <i class="fas fa-ellipsis-h"></i>
+              </div>
+            </div>  
+          `
+        })
+
+        playlist.innerHTML = html.join('\n')
+      },
+      loadCurrentSong: function() {
+        // Load name, cd thumb and audio of song
+        heading.textContent = this.currentSong.name
+        thumb.style.backgroundImage = `url('${this.currentSong.image}')`
+        audio.setAttribute('src', `${this.currentSong.path}`)
+
+        // Active and scroll into view song which is played
+        // Active
+          const isActiveSong = playlist.querySelector('div.song.active')
+          if (isActiveSong) {
+            isActiveSong.classList.remove('active')
+          }
+        // Scroll into view
+          const activeSongs = playlist.querySelector(`div[data-index="${this.currentIndex}"]`)
+          activeSongs.classList.add('active')
+          activeSongs.scrollIntoView({behavier: "smooth", block: "center"})
+      },
+      handleEvent: function() {
+        // Zoom out/Zoom in CD when scroll
+        document.onscroll = function() {
+          let scroll = window.scrollY
+          cd.style.width = cdWidth - scroll > 0 ? cdWidth - scroll + 'px' : 0
+          cd.style.opacity = cd.offsetWidth / cdWidth + 0.3
+        }
+
+        // Rotate CD
+        const cdAnimate = cd.animate([
+            { transform: 'rotate(360deg)' }
+          ], {
+              duration: 10000,
+              iterations: Infinity
+          })
+        cdAnimate.pause()
+
+        // Play/Pause song when press Play button
+        playBtn.onclick = function() {
+          if (!app.isPlaying) {
+            audio.play()            
+          } else {
+            audio.pause()
+          }     
+        }
+
+        // When song is played
+        audio.onplay = function() {
+          app.isPlaying = true
+          player.classList.add('playing')
+          cdAnimate.play()
+        }
+
+        // When song is paused
+        audio.onpause = function() {
+          app.isPlaying = false
+          player.classList.remove('playing')
+          cdAnimate.pause()
+        }
+
+        // Progress bar
+        audio.ontimeupdate = function() {
+          if (audio.duration) {
+            let progressPercent = audio.currentTime / audio.duration * 100
+            $('#progress').value = progressPercent
+          }
+        }
+
+        // Change the progress of song when change the progress bar
+        $('#progress').oninput = function() {
+          $('#progress').oninput = function() {
+            const desireTime = $('#progress').value / 100 * audio.duration
+            audio.currentTime = desireTime
+            audio.pause()
+          }
+          audio.play()
+        }
+
+        // Press Next/Prev button
+        // Next
+        nextBtn.onclick = function() {
+          if (!app.isRandom) {
+            app.nextSong()
+            audio.play()
+          } else {
+            app.randomSong()
+            audio.play()
+          }
+        }
+        // Prev
+        prevBtn.onclick = function() {
+          if (!app.isRandom) {
+            app.prevSong()
+            audio.play()
+          } else {
+            app.randomSong()
+            audio.play()
+          }
+        }
+
+        // Turn on/off random mode when press the Random button
+        randomBtn.onclick = function() {
+          app.isRandom = !app.isRandom
+          app.setConfig('isRandom', app.isRandom)
+          randomBtn.classList.toggle('active', app.isRandom)
+        }
+
+        repeatBtn.onclick = function() {
+          app.isRepeat = !app.isRepeat
+          app.setConfig('isRepeat', app.isRepeat)
+          repeatBtn.classList.toggle('active', app.isRepeat)
+        }
+
+        // Auto change song when ended
+        audio.onended = function() {
+          if (!app.isRepeat) {
+            app.nextSong()
+            app.loadCurrentSong()
+            audio.play()
+          } else {
+            app.loadCurrentSong()
+            audio.play()
+          }
+        }
+
+        // Press playlist
+        playlist.onclick = function (e) {
+            const songNode = e.target.closest('.song:not(.active)')
+
+            if (songNode || e.target.closest('.option')) {
+              if (songNode) {
+                app.currentIndex = +songNode.dataset.index
+                app.loadCurrentSong()
+                audio.play()
+              }
+              
+              if (e.target.closest('.option')) {
+                console.log('option')
+              }
+            }
+        }
+      },
+      loadConfig: function () {
+        this.isRepeat = this.config.isRepeat
+        this.isRandom = this.config.isRandom
+
+        repeatBtn.classList.toggle('active', this.isRepeat)
+        randomBtn.classList.toggle('active', this.isRandom)
+      },
+      nextSong: function() {
+        app.currentIndex++
+          if (app.currentIndex >= app.songs.length) {
+            app.currentIndex = 0
+          }
+        app.loadCurrentSong()
+      },
+      prevSong: function() {
+        app.currentIndex--
+          if (app.currentIndex < 0) {
+            app.currentIndex = app.songs.length - 1
+          }
+        app.loadCurrentSong()
+      },
+      randomSong: function() {
+        const oldIndex = app.currentIndex
+        do {
+          app.currentIndex = Math.floor(Math.random() * app.songs.length)
+        } while (app.currentIndex == oldIndex)
+
+        app.loadCurrentSong()
+      },
+      start: function() {
+        // Define properties
+        this.defineProperties()
+        this.loadConfig();
+
+        // Render list songs
+        this.render()
+
+        // Loading song when start
+        this.loadCurrentSong()
+
+        // Handle events
+        this.handleEvent()
+      }
+    }
+
+    app.start()
+
+  </script>
+</body>
+</html>
